@@ -1,0 +1,116 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  PETUGAS
+  OWNER
+}
+
+enum StatusPembayaran {
+  PENDING
+  LUNAS
+  GAGAL
+}
+
+model User {
+  id           String      @id @default(uuid())
+  name         String
+  username     String      @unique
+  password     String
+  role         Role        @default(PETUGAS)
+  id_area      String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  
+  area         AreaParkir? @relation(fields: [id_area], references: [id])
+  transaksi    Transaksi[]
+  logAktivitas LogAktivitas[]
+
+  @@map("tb_user")
+}
+
+// Master data jenis kendaraan (dinamis, bisa CRUD)
+model JenisKendaraan {
+  id        String   @id @default(uuid())
+  nama      String   @unique
+  createdAt DateTime @default(now())
+
+  @@map("tb_jenis_kendaraan")
+}
+
+model Kendaraan {
+  id              String   @id @default(uuid())
+  plat_nomor      String   @unique
+  jenis_kendaraan String
+  merk            String?
+  warna           String?
+  createdAt       DateTime @default(now())
+
+  transaksi       Transaksi[]
+
+  @@map("tb_kendaraan")
+}
+
+model AreaParkir {
+  id             String   @id @default(uuid())
+  nama_area      String   @unique
+  max_kapasitas  Int
+  terisi         Int      @default(0)
+
+  users          User[]
+  transaksi      Transaksi[]
+
+  @@map("tb_area_parkir")
+}
+
+model Tarif {
+  id                String @id @default(uuid())
+  jenis_kendaraan   String @unique
+  tarif_jam_pertama Int
+  tarif_berikutnya  Int
+  max_biaya_per_hari Int
+
+  @@map("tb_tarif")
+}
+
+model Transaksi {
+  id                String           @id @default(uuid())
+  no_tiket          String           @unique
+  waktu_masuk       DateTime         @default(now())
+  waktu_keluar      DateTime?
+  durasi_jam        Int?
+  total_biaya       Int?
+  status_pembayaran StatusPembayaran @default(PENDING)
+  midtrans_token    String?
+
+  id_user           String
+  id_kendaraan      String
+  id_area           String
+
+  user              User             @relation(fields: [id_user], references: [id])
+  kendaraan         Kendaraan        @relation(fields: [id_kendaraan], references: [id])
+  area              AreaParkir       @relation(fields: [id_area], references: [id])
+
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@map("tb_transaksi")
+}
+
+model LogAktivitas {
+  id        String   @id @default(uuid())
+  id_user   String
+  aksi      String
+  timestamp DateTime @default(now())
+
+  user      User     @relation(fields: [id_user], references: [id])
+
+  @@map("tb_log_aktivitas")
+}

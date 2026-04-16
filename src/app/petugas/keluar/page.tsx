@@ -1,0 +1,266 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
+import Script from "next/script";
+import toast from "react-hot-toast";
+import { Search, Loader2, CreditCard, Banknote, Clock, Tag, Car, Timer, ArrowRight, ArrowLeft, AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+
+declare global { interface Window { snap: any; } }
+
+const MAX_SEARCH = 20;
+
+export default function KendaraanKeluarPage() {
+  const [param, setParam] = useState("");
+  const [transaksi, setTransaksi] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState<"search" | "pay">("search");
+  const [areaError, setAreaError] = useState("");
+  const router = useRouter();
+
+  const handleParamChange = (val: string) => {
+    setAreaError(""); // reset error on type
+    if (val.length > MAX_SEARCH) {
+      toast.error(`Maksimal ${MAX_SEARCH} karakter`);
+      return;
+    }
+    setParam(val.toUpperCase());
+  };
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAreaError("");
+    if (!param.trim()) return toast.error("Masukkan plat nomor atau nomor tiket");
+    setLoading(true); setTransaksi(null);
+    try {
+      const res = await fetch("/api/transaksi/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ param: param.trim() }) });
+      const data = await res.json();
+      if (!res.ok) { 
+        if (res.status === 403) {
+          setAreaError(data.message);
+          toast.error("Akses Ditolak: Area Berbeda", { icon: '🚫' });
+        } else {
+          toast.error(data.message); 
+        }
+      } else { 
+        toast.success("Data ditemukan"); setTransaksi(data.transaksi); setStep("pay"); 
+      }
+    } catch { toast.error("Gagal terhubung ke server"); }
+    finally { setLoading(false); }
+  };
+
+  const handlePayMidtrans = () => {
+    if (!transaksi?.midtrans_token) { handlePayCash(); return; }
+    window.snap.pay(transaksi.midtrans_token, {
+      onSuccess: () => { toast.success("Pembayaran berhasil!"); fetch("/api/transaksi/update-status", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: transaksi.id, status: "LUNAS" }) }).then(() => router.push(`/petugas/struk/${transaksi.id}`)); },
+      onPending: () => toast("Menunggu pembayaran..."),
+      onError: () => toast.error("Pembayaran gagal"),
+      onClose: () => toast.error("Pop-up ditutup"),
+    });
+  };
+
+  const handlePayCash = async () => {
+    const res = await fetch("/api/transaksi/update-status", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: transaksi?.id, status: "LUNAS" }) });
+    if (res.ok) { toast.success("Pembayaran tunai berhasil!"); router.push(`/petugas/struk/${transaksi?.id}`); }
+  };
+
+  const handleBack = () => { setStep("search"); setTransaksi(null); setParam(""); setAreaError(""); };
+
+  return (
+    <div className="max-w-2xl mx-auto">
+      <Script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key={process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY} strategy="lazyOnload" />
+
+      {/* Back Navigation Box */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25 }}
+        className="mb-4"
+      >
+        <button
+          onClick={() => router.push("/petugas/dashboard")}
+          className="flex items-center gap-3 w-full px-4 py-3 rounded-2xl bg-card border border-border hover:bg-accent/50 transition-all duration-200 group"
+        >
+          <div className="w-9 h-9 rounded-xl bg-muted flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+            <ArrowLeft className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+          </div>
+          <div className="text-left">
+            <p className="text-sm font-semibold text-foreground">Kembali ke Terminal</p>
+            <p className="text-[11px] text-muted-foreground">Dashboard petugas</p>
+          </div>
+        </button>
+      </motion.div>
+
+      {/* Header */}
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between mb-6">
+        <div>
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-xs font-semibold mb-2">
+            KENDARAAN KELUAR
+          </div>
+          <h1 className="text-2xl font-bold text-foreground">Proses Checkout</h1>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg bg-muted">
+            <div className={`w-2 h-2 rounded-full ${step === "search" ? "bg-primary" : "bg-muted-foreground/30"}`} />
+            <span className={step === "search" ? "text-foreground" : "text-muted-foreground"}>Cari</span>
+          </div>
+          <ArrowRight className="w-3 h-3 text-muted-foreground" />
+          <div className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg bg-muted">
+            <div className={`w-2 h-2 rounded-full ${step === "pay" ? "bg-emerald-500" : "bg-muted-foreground/30"}`} />
+            <span className={step === "pay" ? "text-foreground" : "text-muted-foreground"}>Bayar</span>
+          </div>
+        </div>
+      </motion.div>
+
+      <AnimatePresence mode="wait">
+        {step === "search" ? (
+          /* ══════════════════════════════════════
+             STEP 1 — Search by plat / tiket
+             ══════════════════════════════════════ */
+          <motion.div key="search" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }}>
+            <Card className="glass-card rounded-2xl border-0 shadow-xl overflow-hidden relative">
+              {/* Visual red glow border if error */}
+              {areaError && (
+                <div className="absolute inset-x-0 top-0 h-1 bg-red-500 animate-pulse" />
+              )}
+              <CardContent className="p-6">
+                <form onSubmit={handleSearch} className="space-y-5">
+                  <AnimatePresence>
+                    {areaError && (
+                      <motion.div 
+                        initial={{ opacity: 0, height: 0, scale: 0.95 }} 
+                        animate={{ opacity: 1, height: "auto", scale: 1 }} 
+                        exit={{ opacity: 0, height: 0, scale: 0.95 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-xl p-4 flex items-start gap-3">
+                          <div className="bg-red-100 dark:bg-red-900/50 rounded-lg p-2 shrink-0">
+                            <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
+                          </div>
+                          <div className="text-left">
+                            <h4 className="text-sm font-bold text-red-800 dark:text-red-300">Akses Ditolak</h4>
+                            <p className="text-xs text-red-600 dark:text-red-400 mt-0.5 leading-snug">
+                              {areaError}
+                            </p>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                  <div>
+                    <label className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-semibold mb-1.5 block">Plat Nomor atau Nomor Tiket</label>
+                    <Input
+                      value={param}
+                      onChange={(e) => handleParamChange(e.target.value)}
+                      disabled={loading}
+                      className={`text-center text-2xl font-bold uppercase h-16 tracking-[0.2em] rounded-2xl bg-muted/40 border-2 transition-colors focus:border-emerald-500 ${areaError ? 'border-red-400 focus:border-red-500 text-red-600' : 'border-transparent text-foreground'}`}
+                      autoFocus
+                    />
+                    <p className="text-[10px] text-muted-foreground text-right mt-1">{param.length}/{MAX_SEARCH}</p>
+                  </div>
+
+                  <motion.div whileTap={{ scale: 0.98 }}>
+                    <Button type="submit" disabled={loading || !param.trim()} className="w-full h-14 rounded-2xl text-base font-bold bg-emerald-600 hover:bg-emerald-700 text-white border-none">
+                      {loading ? <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Mencari...</span> : <span className="flex items-center gap-2"><Search className="w-4 h-4" /> Cari Kendaraan</span>}
+                    </Button>
+                  </motion.div>
+                </form>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+        ) : transaksi && (
+
+          /* ══════════════════════════════════════
+             STEP 2 — Invoice & Payment
+             ══════════════════════════════════════ */
+          <motion.div key="pay" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.25 }} className="space-y-4">
+
+            {/* Invoice Card */}
+            <Card className="rounded-2xl border-0 bg-[#0f172a] text-white overflow-hidden shadow-xl">
+              <CardContent className="p-0">
+                {/* Top: Plat + Jenis */}
+                <div className="p-6 border-b border-white/10">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] uppercase tracking-[0.2em] text-slate-400">Plat Nomor</p>
+                      <p className="text-2xl font-mono font-extrabold tracking-[0.2em] mt-1">{transaksi.kendaraan.plat_nomor}</p>
+                    </div>
+                    <div className="px-3 py-1.5 rounded-lg bg-white/10 text-xs font-semibold text-slate-300">
+                      {transaksi.kendaraan.jenis_kendaraan}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Middle: Details grid */}
+                <div className="grid grid-cols-2 gap-px bg-white/5">
+                  <InfoCell icon={<Tag className="w-3.5 h-3.5" />} label="No Tiket" value={transaksi.no_tiket} mono />
+                  <InfoCell icon={<Car className="w-3.5 h-3.5" />} label="Jenis" value={transaksi.kendaraan.jenis_kendaraan} />
+                  <InfoCell icon={<Clock className="w-3.5 h-3.5" />} label="Masuk" value={new Date(transaksi.waktu_masuk).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })} />
+                  <InfoCell icon={<Clock className="w-3.5 h-3.5" />} label="Keluar" value={new Date(transaksi.waktu_keluar).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })} />
+                </div>
+
+                {/* Duration bar */}
+                <div className="px-6 py-4 border-t border-white/10 flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-slate-400">
+                    <Timer className="w-4 h-4" />
+                    <span className="text-xs">Durasi Parkir</span>
+                  </div>
+                  <span className="text-lg font-bold">{transaksi.durasi_jam} Jam</span>
+                </div>
+
+                {/* Total — hero */}
+                <div className="px-6 py-5 bg-emerald-600">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold text-emerald-100">TOTAL BAYAR</span>
+                    <span className="text-3xl font-extrabold">Rp {transaksi.total_biaya?.toLocaleString('id-ID')}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Payment buttons */}
+            <div className="grid grid-cols-2 gap-3">
+              <motion.div whileTap={{ scale: 0.97 }}>
+                <Button size="lg" variant="outline" className="w-full h-14 text-base gap-2 rounded-2xl font-semibold" onClick={handlePayCash}>
+                  <Banknote className="w-5 h-5" /> Tunai
+                </Button>
+              </motion.div>
+              <motion.div whileTap={{ scale: 0.97 }}>
+                <Button size="lg" className="w-full h-14 bg-emerald-600 hover:bg-emerald-700 text-white text-base gap-2 rounded-2xl border-none font-semibold shadow-lg shadow-emerald-600/20" onClick={handlePayMidtrans}>
+                  <CreditCard className="w-5 h-5" /> Online
+                </Button>
+              </motion.div>
+            </div>
+
+            <button
+              onClick={handleBack}
+              className="flex items-center gap-3 w-full px-4 py-3 rounded-2xl bg-card border border-border hover:bg-accent/50 transition-all duration-200 group"
+            >
+              <div className="w-9 h-9 rounded-xl bg-muted flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                <ArrowLeft className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-semibold text-foreground">Cari Kendaraan Lain</p>
+                <p className="text-[11px] text-muted-foreground">Kembali ke pencarian</p>
+              </div>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function InfoCell({ icon, label, value, mono = false }: { icon: React.ReactNode; label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="p-4 bg-[#0f172a]">
+      <div className="flex items-center gap-1.5 text-slate-500 mb-1">{icon}<span className="text-[10px] uppercase tracking-wider">{label}</span></div>
+      <p className={`text-sm font-medium ${mono ? "font-mono tracking-widest" : ""}`}>{value}</p>
+    </div>
+  );
+}
