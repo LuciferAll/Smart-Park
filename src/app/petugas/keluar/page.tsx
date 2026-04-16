@@ -1,14 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Script from "next/script";
 import toast from "react-hot-toast";
-import { Search, Loader2, CreditCard, Banknote, Clock, Tag, Car, Timer, ArrowRight, ArrowLeft, AlertTriangle } from "lucide-react";
+import { Search, Loader2, CreditCard, Banknote, Clock, Tag, Car, Timer, ArrowRight, ArrowLeft, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 
 declare global { interface Window { snap: any; } }
 
@@ -20,21 +22,36 @@ export default function KendaraanKeluarPage() {
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<"search" | "pay">("search");
   const [areaError, setAreaError] = useState("");
+  const [uangTunai, setUangTunai] = useState("");
+  const [aktifList, setAktifList] = useState<any[]>([]);
+  const [page, setPage] = useState(1);
   const router = useRouter();
 
+  const itemsPerPage = 5;
+  const totalPages = Math.ceil(aktifList.length / itemsPerPage);
+  const paginatedList = aktifList.slice((page - 1) * itemsPerPage, page * itemsPerPage);
+
+  useEffect(() => {
+    fetch("/api/transaksi/aktif").then(r => r.json()).then(d => {
+      if (d.aktif) setAktifList(d.aktif);
+    });
+  }, []);
+
   const handleParamChange = (val: string) => {
-    setAreaError(""); // reset error on type
-    if (val.length > MAX_SEARCH) {
+    setAreaError("");
+    const cleanVal = val.replace(/\s/g, "").toUpperCase();
+    if (cleanVal.length > MAX_SEARCH) {
       toast.error(`Maksimal ${MAX_SEARCH} karakter`);
       return;
     }
-    setParam(val.toUpperCase());
+    setParam(cleanVal);
   };
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     setAreaError("");
     if (!param.trim()) return toast.error("Masukkan plat nomor atau nomor tiket");
+    if (param.length < 3) return toast.error("Minimal 3 karakter tanpa spasi.");
     setLoading(true); setTransaksi(null);
     try {
       const res = await fetch("/api/transaksi/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ param: param.trim() }) });
@@ -63,12 +80,18 @@ export default function KendaraanKeluarPage() {
     });
   };
 
+  const kembalian = uangTunai ? parseInt(uangTunai) - (transaksi?.total_biaya || 0) : -1;
+
   const handlePayCash = async () => {
+    if (kembalian < 0) {
+      toast.error("Uang tunai kurang dari total!");
+      return;
+    }
     const res = await fetch("/api/transaksi/update-status", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: transaksi?.id, status: "LUNAS" }) });
-    if (res.ok) { toast.success("Pembayaran tunai berhasil!"); router.push(`/petugas/struk/${transaksi?.id}`); }
+    if (res.ok) { toast.success("Pembayaran tunai berhasil!"); router.push(`/petugas/struk/${transaksi?.id}?tunai=${uangTunai}&kembali=${kembalian}`); }
   };
 
-  const handleBack = () => { setStep("search"); setTransaksi(null); setParam(""); setAreaError(""); };
+  const handleBack = () => { setStep("search"); setTransaksi(null); setParam(""); setAreaError(""); setUangTunai(""); };
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -171,6 +194,55 @@ export default function KendaraanKeluarPage() {
                 </form>
               </CardContent>
             </Card>
+
+            {/* Tabel Kendaraan Aktif Paginated */}
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mt-6">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-bold flex items-center gap-2"><Clock className="w-4 h-4 text-emerald-500"/> Kendaraan Aktif di Area Anda</h3>
+                <Badge variant="secondary" className="rounded-lg">{aktifList.length} Kendaraan</Badge>
+              </div>
+              
+              <Card className="rounded-2xl border-0 shadow-lg overflow-hidden glass-card">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/30">
+                      <TableHead className="text-[10px] uppercase tracking-wider py-2">Tiket</TableHead>
+                      <TableHead className="text-[10px] uppercase tracking-wider py-2">Plat</TableHead>
+                      <TableHead className="text-[10px] uppercase tracking-wider py-2">Masuk</TableHead>
+                      <TableHead className="text-[10px] uppercase tracking-wider text-right py-2">Aksi</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedList.length === 0 ? (
+                      <TableRow><TableCell colSpan={4} className="text-center text-xs text-muted-foreground py-6">Bersih! Tidak ada kendaraan aktif.</TableCell></TableRow>
+                    ) : paginatedList.map(t => (
+                      <TableRow key={t.id} className="hover:bg-accent/20">
+                        <TableCell className="font-mono text-xs font-bold py-2">{t.no_tiket}</TableCell>
+                        <TableCell className="font-mono text-xs font-bold text-primary py-2">{t.kendaraan.plat_nomor}</TableCell>
+                        <TableCell className="text-xs py-2">{new Date(t.waktu_masuk).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'})}</TableCell>
+                        <TableCell className="text-right py-2">
+                          <Button size="sm" className="h-7 text-[10px] rounded-lg px-3 bg-slate-900 border-none font-bold tracking-wider hover:bg-slate-700 text-white" onClick={() => {
+                            setParam(t.kendaraan.plat_nomor);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}>Pilih</Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <div className="px-4 py-2 border-t flex items-center justify-between bg-card text-xs">
+                    <span className="text-muted-foreground font-semibold">Halaman {page} dari {totalPages}</span>
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="icon" className="w-7 h-7 rounded-lg hover:bg-accent" disabled={page === 1} onClick={() => setPage(page-1)}><ChevronLeft className="w-4 h-4" /></Button>
+                      <Button variant="ghost" size="icon" className="w-7 h-7 rounded-lg hover:bg-accent" disabled={page === totalPages} onClick={() => setPage(page+1)}><ChevronRight className="w-4 h-4" /></Button>
+                    </div>
+                  </div>
+                )}
+              </Card>
+            </motion.div>
           </motion.div>
 
         ) : transaksi && (
@@ -223,16 +295,39 @@ export default function KendaraanKeluarPage() {
               </CardContent>
             </Card>
 
+            {/* Payment Input */}
+            <div className="bg-muted p-4 rounded-2xl border mb-2">
+              <label className="text-xs uppercase tracking-widest font-semibold text-muted-foreground block mb-2">Penerimaan Uang Tunai (Rp)</label>
+              <Input
+                type="number"
+                value={uangTunai}
+                onChange={(e) => setUangTunai(e.target.value)}
+                placeholder="Masukkan jumlah uang..."
+                className="h-12 text-lg font-bold"
+              />
+              {uangTunai && kembalian >= 0 && (
+                <div className="mt-3 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 p-3 rounded-xl flex justify-between font-bold text-sm border border-emerald-200 dark:border-emerald-800">
+                  <span>Kembalian:</span>
+                  <span>Rp {kembalian.toLocaleString('id-ID')}</span>
+                </div>
+              )}
+              {uangTunai && kembalian < 0 && (
+                <div className="mt-3 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 p-3 rounded-xl font-bold text-sm border border-red-200 dark:border-red-800">
+                  Uang tunai kurang Rp {Math.abs(kembalian).toLocaleString('id-ID')}
+                </div>
+              )}
+            </div>
+
             {/* Payment buttons */}
             <div className="grid grid-cols-2 gap-3">
-              <motion.div whileTap={{ scale: 0.97 }}>
-                <Button size="lg" variant="outline" className="w-full h-14 text-base gap-2 rounded-2xl font-semibold" onClick={handlePayCash}>
-                  <Banknote className="w-5 h-5" /> Tunai
+              <motion.div whileTap={{ scale: kembalian >= 0 ? 0.97 : 1 }}>
+                <Button size="lg" disabled={kembalian < 0} variant="outline" className="w-full h-14 text-base gap-2 rounded-2xl font-semibold bg-emerald-600 hover:bg-emerald-700 hover:text-white text-white border-none shadow-lg outline-none" onClick={handlePayCash}>
+                  <Banknote className="w-5 h-5" /> Bayar Tunai
                 </Button>
               </motion.div>
               <motion.div whileTap={{ scale: 0.97 }}>
-                <Button size="lg" className="w-full h-14 bg-emerald-600 hover:bg-emerald-700 text-white text-base gap-2 rounded-2xl border-none font-semibold shadow-lg shadow-emerald-600/20" onClick={handlePayMidtrans}>
-                  <CreditCard className="w-5 h-5" /> Online
+                <Button size="lg" variant="outline" className="w-full h-14 text-base gap-2 rounded-2xl border-none font-semibold shadow-lg text-slate-700 bg-white hover:bg-slate-50" onClick={handlePayMidtrans}>
+                  <CreditCard className="w-5 h-5" /> QRIS / Online
                 </Button>
               </motion.div>
             </div>

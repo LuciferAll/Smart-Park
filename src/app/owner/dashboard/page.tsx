@@ -19,7 +19,7 @@ export default async function OwnerDashboardPage() {
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
   // Query semua pendapatan
-  const [totalAll, totalBulan, totalMinggu, totalHariIni, totalTransaksiHariIni] = await Promise.all([
+  const [totalAll, totalBulan, totalMinggu, totalHariIni, totalTransaksiHariIni, totalAllTransaksiLunas] = await Promise.all([
     prisma.transaksi.aggregate({
       _sum: { total_biaya: true },
       _count: true,
@@ -43,6 +43,10 @@ export default async function OwnerDashboardPage() {
     prisma.transaksi.count({
       where: { status_pembayaran: "LUNAS", updatedAt: { gte: todayStart } }
     }),
+    prisma.transaksi.findMany({
+      where: { status_pembayaran: "LUNAS" },
+      select: { total_biaya: true, updatedAt: true }
+    })
   ]);
 
   // Data chart: Pendapatan 7 hari terakhir
@@ -81,6 +85,7 @@ export default async function OwnerDashboardPage() {
         totalHariIniCount: totalTransaksiHariIni,
       }}
       chartData={chartData}
+      allTransactions={totalAllTransaksiLunas}
     />
   );
 }

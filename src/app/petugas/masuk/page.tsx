@@ -45,18 +45,21 @@ export default function KendaraanMasukPage() {
   }, []);
 
   const handlePlatChange = (val: string) => {
-    setDuplicateError(""); // clear duplicate error when typing
-    if (val.length > MAX_PLAT) {
+    setDuplicateError("");
+    // Regex menghilangkan spasi dan uppercase otomatis
+    const cleanVal = val.replace(/\s/g, "").toUpperCase();
+    if (cleanVal.length > MAX_PLAT) {
       toast.error(`Plat nomor maksimal ${MAX_PLAT} karakter`);
       return;
     }
-    setPlatNomor(val.toUpperCase());
+    setPlatNomor(cleanVal);
   };
 
   const handleMasuk = async (e: React.FormEvent) => {
     e.preventDefault();
     setDuplicateError("");
     if (!platNomor.trim()) { toast.error("Plat nomor wajib diisi"); return; }
+    if (platNomor.length < 3) { toast.error("Plat nomor tidak valid (minimal 3 karakter)"); return; }
     if (!jenis) { toast.error("Pilih jenis kendaraan"); return; }
     setLoading(true);
     try {

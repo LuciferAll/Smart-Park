@@ -28,12 +28,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [notifLoading, setNotifLoading] = useState(false);
   const [hasNew, setHasNew] = useState(true);
+  const [areaStats, setAreaStats] = useState<{kapasitas: number, terisi: number} | null>(null);
   const notifRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    fetch("/api/auth/me").then(r => r.json()).then(d => { if (d.user) setUser(d.user); else router.push("/login"); }).catch(() => router.push("/login"));
+    fetch("/api/auth/me").then(r => r.json()).then(d => { 
+      if (d.user) {
+        setUser(d.user); 
+        if (d.user.role === "PETUGAS") {
+          fetch("/api/petugas/area").then(res => res.json()).then(stats => {
+            if (stats && stats.max_kapasitas !== undefined) {
+              setAreaStats({ kapasitas: stats.max_kapasitas, terisi: stats.terisi });
+            }
+          });
+        }
+      } else router.push("/login"); 
+    }).catch(() => router.push("/login"));
   }, [router]);
 
   useEffect(() => {
@@ -212,7 +224,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div>
               <h2 className="text-sm font-semibold text-foreground capitalize">{user.role.toLowerCase()} Panel</h2>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-4">
+              
+              {/* Petugas Capacity Bar */}
+              {user.role === "PETUGAS" && areaStats && (
+                <div className="hidden sm:flex flex-col items-end border-r border-border pr-5 mr-1">
+                  <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Kapasitas Area</div>
+                  <div className="flex items-center gap-3 w-36">
+                    <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full transition-all duration-700 ease-out ${
+                          (areaStats.terisi / areaStats.kapasitas) > 0.9 ? 'bg-rose-500' : 'bg-primary'
+                        }`} 
+                        style={{width: `${Math.min((areaStats.terisi / areaStats.kapasitas) * 100, 100)}%`}}>
+                      </div>
+                    </div>
+                    <span className="text-xs font-bold font-mono tracking-widest">
+                      {areaStats.terisi}/{areaStats.kapasitas}
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {/* Dark mode toggle */}
               <Button variant="ghost" size="icon" className="rounded-xl" onClick={toggleDark}>
                 {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}

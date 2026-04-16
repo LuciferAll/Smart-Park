@@ -11,9 +11,7 @@ import Link from "next/link";
 
 type Tarif = {
   jenis_kendaraan: string;
-  tarif_jam_pertama: number;
-  tarif_berikutnya: number;
-  max_biaya_per_hari: number;
+  tarif_per_jam: number | string;
 };
 
 type Transaksi = {
@@ -68,11 +66,7 @@ export default function PetugasDashboardClient({ transaksi, tarif, namaArea }: P
       return base * durasiMenit;
     }
 
-    let biaya = masterTarif.tarif_jam_pertama + (durasiMenit - 1) * masterTarif.tarif_berikutnya;
-    if (biaya > masterTarif.max_biaya_per_hari) {
-      biaya = masterTarif.max_biaya_per_hari;
-    }
-    return biaya;
+    return Number(masterTarif.tarif_per_jam) * durasiMenit;
   };
 
   const getMenitTelahBerlalu = (waktuMasuk: string) => {

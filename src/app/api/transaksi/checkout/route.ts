@@ -71,11 +71,7 @@ export async function POST(req: Request) {
       const base = basePerJam[transaksi.kendaraan.jenis_kendaraan.toUpperCase()] || 2000;
       biaya = base * durasiJam;
     } else {
-      // tarif_jam_pertama = tarif jam pertama, tarif_berikutnya = tarif per jam berikutnya
-      biaya = masterTarif.tarif_jam_pertama + (durasiJam - 1) * masterTarif.tarif_berikutnya;
-      if (biaya > masterTarif.max_biaya_per_hari) {
-        biaya = masterTarif.max_biaya_per_hari;
-      }
+      biaya = Number(masterTarif.tarif_per_jam) * durasiJam;
     }
 
     // Update Transaksi dengan data kalkulasi (Masih Pending)

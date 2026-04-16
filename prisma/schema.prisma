@@ -32,6 +32,7 @@ model User {
   area         AreaParkir? @relation(fields: [id_area], references: [id])
   transaksi    Transaksi[]
   logAktivitas LogAktivitas[]
+  kendaraans   Kendaraan[]
 
   @@map("tb_user")
 }
@@ -52,8 +53,10 @@ model Kendaraan {
   merk            String?
   warna           String?
   pemilik         String?
+  id_user         String?
   createdAt       DateTime @default(now())
 
+  user            User?    @relation(fields: [id_user], references: [id])
   transaksi       Transaksi[]
 
   @@map("tb_kendaraan")
@@ -74,9 +77,9 @@ model AreaParkir {
 model Tarif {
   id                String @id @default(uuid())
   jenis_kendaraan   String @unique
-  tarif_jam_pertama Int
-  tarif_berikutnya  Int
-  max_biaya_per_hari Int
+  tarif_per_jam     Decimal @default(0) @db.Decimal(10, 0)
+
+  transaksis        Transaksi[]
 
   @@map("tb_tarif")
 }
@@ -94,10 +97,12 @@ model Transaksi {
   id_user           String
   id_kendaraan      String
   id_area           String
+  id_tarif          String?
 
   user              User             @relation(fields: [id_user], references: [id])
   kendaraan         Kendaraan        @relation(fields: [id_kendaraan], references: [id])
   area              AreaParkir       @relation(fields: [id_area], references: [id])
+  tarif             Tarif?           @relation(fields: [id_tarif], references: [id])
 
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt

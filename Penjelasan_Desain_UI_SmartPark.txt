@@ -1,0 +1,31 @@
+KONSEP DESAIN APLIKASI SMARTPARK (Untuk Orang Awam/Presentasi Umum)
+
+Aplikasi SmartPark dirancang bukan sekadar untuk mesin pencatat kendaraan, tetapi untuk memberikan kenyamanan dan rasa "menyenangkan" bagi mata penggunannya. Kami percaya bahwa aplikasi yang dipakai bekerja setiap hari dari pagi sampai malam harus terasa segar, tidak membosankan, dan sangat mudah dipahami bahkan oleh orang "gaptek" sekalipun.
+
+Berikut adalah beberapa prinsip desain (UI/UX) yang kami usung di aplikasi ini:
+
+1. MODERN, BERSIH, & TERASA MAHAL (Glassmorphism)
+Kami membuang desain kotak abu-abu kaku layaknya aplikasi kasir tahun 2000-an. Sebaliknya, kami menggunakan gaya masa kini yang disebut "Glassmorphism" (efek menyerupai kaca). 
+Kotak-kotak, tabel, dan menu utama dibuat seolah-olah mengambang halus dengan bayangan tipis (shadow) di layar. Ujung-ujung tombol dibuat melengkung manis (tidak bersudut tajam) sehingga terasa jauh lebih bersahabat dan elegan layaknya aplikasi level internasional milik perusahaan besar.
+
+2. RAMAH DAN SEJUK DI MATA (Fitur Matahari & Bulan)
+Petugas parkir bekerja siang dan malam. Oleh karena itu, kami memberikan tombol saklar rahasia di pojok kanan atas:
+- "Mode Matahari" (Terang): Menonjolkan layar cerah yang cocok dipakai siang hari agar tulisan mudah dibaca saat cuaca terik.
+- "Mode Bulan" (Gelap/Dark Mode): Mengubah layar menjadi nuansa malam (hitam kebiruan). Sangat sejuk di mata dan mengurangi radiasi silau, cocok untuk petugas shift malam yang menatap layar berjam-jam.
+
+3. PEMILIHAN WARNA YANG MERANGSANG OTAK
+Setiap warna dalam aplikasi ini sengaja dipilih agar tujuannya langsung mengena di alam bawah sadar, tanpa harus pusing membaca teksnya:
+[Hijau]: Mencerminkan segala sesuatu yang berbau 'Aman', 'Sukses' dan 'Uang'. Tombol bayar, teks LUNAS, dan cetak struk sengaja dicat warna Emerald (hijau zamrud) agar petugas tau itu adalah titik akhir penyelesaian urusan.
+[Merah/Pink]: Mewakili 'Bahaya/Larangan'. Akan muncul otomatis terang-terangan jika kapasitas parkir nyaris meledak atau plat nomor yang diketik kurang panjang.
+[Biru/Biru Muda]: Untuk warna navigasi damai, seperti menu, kembali, atau melihat rekapan.
+
+4. MENGERTI "SIKSAAN" PETUGAS (Fokus Pekerjaan Cepat)
+Kami paham bahwa saat ramai, petugas tidak punya waktu menatap tombol rumit. 
+- Tulisan huruf Plat Nomor dan Total Harga dibuat BESAARRR, dengan jarak agak renggang, dan otomatis KAPITAL semua tanpa peduli tombol caps-lock dipencet atau tidak. Tujuannya menghindari typo atau salah tagih uang.
+- Layarnya sengaja disisakan area kosong yang lega (minimalis). Semakin sedikit tombol "nyampah" di layar, semakin kecil kemungkinan kasir panik hingga memencet menu yang salah.
+
+5. APLIKASI YANG MENGHARGAI PEMAKAINYA (Animasi Halus)
+Ketika Anda hanya mendekatkan kursor (mouse) perlahan ke sebuah tombol, tombolnya akan 'merespon' dan sedikit tersenyum mengembang ke depan menyapa Anda. Ketika Anda berpindah halaman, layarnya tidak langsung berkedip buta, melainkan masuk bergeser memudar secara sangat mulus dari bawah. 
+
+KESIMPULAN:
+Aplikasi SmartPark diibaratkan seperti mobil modern yang bodynya mulus nan aerodinamis, dasbornya lapang dan bersih dari tombol ruwet, namun saat tombol utamanya dipencet tenaga mesinnya luar biasa presisi (aman tanpa spasi, otomatis menghitung kembalian, menolak kalau parkir penuh, dsb). Tidak hanya canggih di belakang, tapi juga cantik di depan.

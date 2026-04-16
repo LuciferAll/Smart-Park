@@ -25,7 +25,11 @@ export default async function PetugasDashboardPage() {
   });
 
   // Ambil semua tarif untuk perhitungan simulasi real-time di client
-  const tarifList = await prisma.tarif.findMany();
+  const tarifRaw = await prisma.tarif.findMany();
+  const tarifList = JSON.parse(JSON.stringify(tarifRaw)).map((t: any) => ({
+    ...t,
+    tarif_per_jam: Number(t.tarif_per_jam)
+  }));
 
   return (
     <PetugasDashboardClient 

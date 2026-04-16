@@ -3,8 +3,18 @@ import { notFound } from "next/navigation";
 import { Car } from "lucide-react";
 import { PrintButton } from "@/components/PrintButton";
 
-export default async function CetakStrukPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function CetakStrukPage({ 
+  params, 
+  searchParams 
+}: { 
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ tunai?: string; kembali?: string }>;
+}) {
   const { id } = await params;
+  const queriedParams = await searchParams;
+  const tunai = queriedParams.tunai;
+  const kembali = queriedParams.kembali;
+
   const transaksi = await prisma.transaksi.findUnique({
     where: { id },
     include: { kendaraan: true, user: true, area: true }
@@ -56,7 +66,21 @@ export default async function CetakStrukPage({ params }: { params: Promise<{ id:
             <span>TOTAL BIAYA</span>
             <span>Rp {transaksi.total_biaya?.toLocaleString('id-ID')}</span>
           </div>
-          <div className="flex justify-between text-xs mt-1">
+
+          {tunai && kembali && (
+            <>
+              <div className="flex justify-between text-sm text-slate-700 mt-1">
+                <span>TUNAI</span>
+                <span>Rp {parseInt(tunai).toLocaleString('id-ID')}</span>
+              </div>
+              <div className="flex justify-between text-sm text-slate-700 mt-1">
+                <span>KEMBALI</span>
+                <span>Rp {parseInt(kembali).toLocaleString('id-ID')}</span>
+              </div>
+            </>
+          )}
+
+          <div className="flex justify-between text-xs mt-2">
             <span>STATUS</span>
             <span className="bg-black text-white px-1 ml-2">LUNAS</span>
           </div>

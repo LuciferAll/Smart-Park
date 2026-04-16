@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
-import { Plus, Trash2, Users, Search, MapPin } from "lucide-react";
+import { Plus, Trash2, Users, Search, MapPin, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,6 +29,7 @@ export default function UsersClient({ data, areas }: { data: any[]; areas: AreaP
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
+  const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", username: "", password: "", role: "PETUGAS", id_area: "" });
 
   const filtered = data.filter(u =>
@@ -36,18 +37,21 @@ export default function UsersClient({ data, areas }: { data: any[]; areas: AreaP
     u.username.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleCreate = async () => {
-    if (!form.name || !form.username || !form.password) { toast.error("Semua field wajib diisi"); return; }
+  const handleSave = async () => {
+    if (!form.name || !form.username) { toast.error("Nama dan Username wajib diisi"); return; }
+    if (!editId && !form.password) { toast.error("Password wajib diisi untuk user baru"); return; }
     if (form.role === "PETUGAS" && !form.id_area) { toast.error("Area parkir wajib dipilih untuk petugas"); return; }
     setLoading(true);
     try {
       const payload = {
+        id: editId,
         ...form,
         id_area: form.role === "PETUGAS" ? form.id_area : null,
       };
-      const res = await fetch("/api/admin/users", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      const method = editId ? "PUT" : "POST";
+      const res = await fetch("/api/admin/users", { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       const text = await res.text(); const json = text ? JSON.parse(text) : {};
-      if (!res.ok) { toast.error(json.message || "Gagal"); } else { toast.success(json.message || "Berhasil"); setForm({ name: "", username: "", password: "", role: "PETUGAS", id_area: "" }); setOpen(false); router.refresh(); }
+      if (!res.ok) { toast.error(json.message || "Gagal"); } else { toast.success(json.message || "Berhasil"); setForm({ name: "", username: "", password: "", role: "PETUGAS", id_area: "" }); setEditId(null); setOpen(false); router.refresh(); }
     } catch { toast.error("Gagal terhubung ke server"); }
     setLoading(false);
   };
@@ -68,7 +72,7 @@ export default function UsersClient({ data, areas }: { data: any[]; areas: AreaP
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2"><Users className="w-6 h-6 text-primary" /> Manajemen User</h1>
           <p className="text-sm text-muted-foreground mt-1">Kelola akun petugas, admin, dan owner</p>
         </div>
-        <Button className="gradient-indigo rounded-xl text-white border-none shadow-lg shadow-primary/20" onClick={() => setOpen(true)}>
+        <Button className="gradient-indigo rounded-xl text-white border-none shadow-lg shadow-primary/20" onClick={() => { setEditId(null); setForm({ name: "", username: "", password: "", role: "PETUGAS", id_area: "" }); setOpen(true); }}>
           <Plus className="w-4 h-4 mr-2" /> Tambah User
         </Button>
       </motion.div>
@@ -111,9 +115,14 @@ export default function UsersClient({ data, areas }: { data: any[]; areas: AreaP
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">{new Date(u.createdAt).toLocaleDateString('id-ID')}</TableCell>
                 <TableCell className="text-right">
-                  <Button variant="ghost" size="icon" className="rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => handleDelete(u.id, u.name)}>
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                  <div className="flex items-center justify-end gap-1">
+                    <Button variant="ghost" size="icon" className="rounded-xl text-muted-foreground hover:text-amber-500 hover:bg-amber-50" onClick={() => { setEditId(u.id); setForm({ name: u.name, username: u.username, password: "", role: u.role, id_area: u.id_area || "" }); setOpen(true); }}>
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="w-8 h-8 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => handleDelete(u.id, u.name)}>
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -121,13 +130,13 @@ export default function UsersClient({ data, areas }: { data: any[]; areas: AreaP
         </Table>
       </Card>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={(val) => { setOpen(val); if (!val) { setEditId(null); setForm({ name: "", username: "", password: "", role: "PETUGAS", id_area: "" }); } }}>
         <DialogContent className="sm:max-w-md rounded-2xl">
-          <DialogHeader><DialogTitle>Tambah User Baru</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editId ? "Edit User" : "Tambah User Baru"}</DialogTitle></DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5"><Label className="text-xs uppercase tracking-wider text-muted-foreground">Nama Lengkap</Label><Input value={form.name} onChange={e => limitedChange(e.target.value, LIMITS.name, v => setForm({...form, name: v}), "Nama")} className="rounded-xl h-11" /><p className="text-[10px] text-muted-foreground text-right">{form.name.length}/{LIMITS.name}</p></div>
             <div className="space-y-1.5"><Label className="text-xs uppercase tracking-wider text-muted-foreground">Username</Label><Input value={form.username} onChange={e => limitedChange(e.target.value, LIMITS.username, v => setForm({...form, username: v}), "Username")} className="rounded-xl h-11" /><p className="text-[10px] text-muted-foreground text-right">{form.username.length}/{LIMITS.username}</p></div>
-            <div className="space-y-1.5"><Label className="text-xs uppercase tracking-wider text-muted-foreground">Password</Label><Input type="password" value={form.password} onChange={e => limitedChange(e.target.value, LIMITS.password, v => setForm({...form, password: v}), "Password")} className="rounded-xl h-11" /><p className="text-[10px] text-muted-foreground text-right">{form.password.length}/{LIMITS.password}</p></div>
+            <div className="space-y-1.5"><Label className="text-xs uppercase tracking-wider text-muted-foreground">Password {editId && <span className="text-amber-500 lowercase normal-case">(kosongkan jika tidak ingin diubah)</span>}</Label><Input type="password" value={form.password} onChange={e => limitedChange(e.target.value, LIMITS.password, v => setForm({...form, password: v}), "Password")} placeholder={editId ? "*** (kosongkan jika tidak ingin diubah)" : ""} className="rounded-xl h-11" /><p className="text-[10px] text-muted-foreground text-right">{form.password.length}/{LIMITS.password}</p></div>
             <div className="space-y-1.5"><Label className="text-xs uppercase tracking-wider text-muted-foreground">Role</Label>
               <Select value={form.role} onValueChange={val => setForm({ ...form, role: val || "PETUGAS", id_area: val !== "PETUGAS" ? "" : form.id_area })}>
                 <SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger>
@@ -159,7 +168,7 @@ export default function UsersClient({ data, areas }: { data: any[]; areas: AreaP
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" className="rounded-xl" onClick={() => setOpen(false)}>Batal</Button>
-            <Button className="gradient-indigo rounded-xl text-white border-none" onClick={handleCreate} disabled={loading}>{loading ? "Menyimpan..." : "Simpan"}</Button>
+            <Button className="gradient-indigo rounded-xl text-white border-none" onClick={handleSave} disabled={loading}>{loading ? "Menyimpan..." : "Simpan"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

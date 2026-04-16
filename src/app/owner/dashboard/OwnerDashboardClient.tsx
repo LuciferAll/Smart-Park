@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { DollarSign, TrendingUp, Calendar, CalendarDays, Activity, BarChart3 } from "lucide-react";
+import { DollarSign, TrendingUp, Calendar, CalendarDays, Activity, BarChart3, Filter } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type Stats = {
@@ -19,8 +20,28 @@ type ChartItem = { label: string; value: number };
 
 const fmtRp = (n: number) => `Rp ${n.toLocaleString("id-ID")}`;
 
-export default function OwnerDashboardClient({ stats, chartData }: { stats: Stats; chartData: ChartItem[] }) {
+export default function OwnerDashboardClient({ stats, chartData, allTransactions = [] }: { stats: Stats; chartData: ChartItem[], allTransactions?: any[] }) {
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
   const maxChart = Math.max(...chartData.map(d => d.value), 1);
+
+  // Kalkulasi custom filter
+  const customFiltered = allTransactions.filter(t => {
+    if (!startDate && !endDate) return true;
+    const tDate = new Date(t.updatedAt);
+    const yyyy = tDate.getFullYear();
+    const mm = String(tDate.getMonth() + 1).padStart(2, '0');
+    const dd = String(tDate.getDate()).padStart(2, '0');
+    const dStr = `${yyyy}-${mm}-${dd}`;
+    if (startDate && endDate) return dStr >= startDate && dStr <= endDate;
+    if (startDate) return dStr >= startDate;
+    if (endDate) return dStr <= endDate;
+    return true;
+  });
+
+  const customTotal = customFiltered.reduce((sum, t) => sum + (t.total_biaya || 0), 0);
+  const customCount = customFiltered.length;
 
   const cards = [
     { title: "Pendapatan Total", value: stats.totalAll, count: stats.totalAllCount, icon: <DollarSign className="w-5 h-5" />, gradient: "from-indigo-500 to-purple-600", shadow: "shadow-indigo-500/20" },
@@ -35,6 +56,39 @@ export default function OwnerDashboardClient({ stats, chartData }: { stats: Stat
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
         <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Laporan Eksekutif</h1>
         <p className="text-slate-500 mt-1">Ringkasan pendapatan dan performa operasional parkir</p>
+      </motion.div>
+
+      {/* Custom Filter Card */}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="bg-card p-5 rounded-2xl border shadow-sm flex flex-col md:flex-row items-center gap-6 justify-between">
+        <div className="flex items-center gap-4 w-full md:w-auto">
+          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+            <Filter className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h3 className="font-semibold">Filter Pendapatan</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">Cek pendapatan berdasarkan rentang tanggal</p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-muted-foreground uppercase">Mulai</span>
+            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="text-sm bg-muted/50 border-none rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-primary" />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-muted-foreground uppercase">Sampai</span>
+            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="text-sm bg-muted/50 border-none rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-primary" />
+          </div>
+          {(startDate || endDate) && (
+            <button onClick={() => {setStartDate(""); setEndDate("");}} className="text-xs font-semibold text-rose-500 hover:bg-rose-50 px-3 py-2 rounded-lg transition-colors">Reset</button>
+          )}
+        </div>
+
+        <div className="w-full md:w-auto text-right pl-0 md:pl-6 border-t md:border-t-0 md:border-l pt-4 md:pt-0">
+          <p className="text-xs text-muted-foreground font-semibold uppercase mb-1">Total Terpilih</p>
+          <p className="text-2xl font-extrabold text-primary">{fmtRp(customTotal)}</p>
+          <p className="text-[10px] text-muted-foreground mt-1">{customCount} transaksi lunas</p>
+        </div>
       </motion.div>
 
       {/* Revenue Cards */}

@@ -15,9 +15,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
-  const { id, jenis_kendaraan, tarif_jam_pertama, tarif_berikutnya, max_biaya_per_hari } = await req.json();
+  const { id, jenis_kendaraan, tarif_per_jam } = await req.json();
 
-  if (!jenis_kendaraan || !tarif_jam_pertama || !tarif_berikutnya || !max_biaya_per_hari) {
+  if (!jenis_kendaraan || !tarif_per_jam) {
     return NextResponse.json({ message: "Semua field wajib diisi" }, { status: 400 });
   }
 
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     // Update existing
     const tarif = await prisma.tarif.update({
       where: { id },
-      data: { jenis_kendaraan, tarif_jam_pertama: Number(tarif_jam_pertama), tarif_berikutnya: Number(tarif_berikutnya), max_biaya_per_hari: Number(max_biaya_per_hari) }
+      data: { jenis_kendaraan, tarif_per_jam: Number(tarif_per_jam) }
     });
     return NextResponse.json({ message: "Tarif berhasil diperbarui", tarif });
   } else {
@@ -35,7 +35,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Tarif untuk jenis kendaraan ini sudah ada. Gunakan edit." }, { status: 400 });
     }
     const tarif = await prisma.tarif.create({
-      data: { jenis_kendaraan, tarif_jam_pertama: Number(tarif_jam_pertama), tarif_berikutnya: Number(tarif_berikutnya), max_biaya_per_hari: Number(max_biaya_per_hari) }
+      data: { jenis_kendaraan, tarif_per_jam: Number(tarif_per_jam) }
     });
     return NextResponse.json({ message: "Tarif berhasil dibuat", tarif });
   }
