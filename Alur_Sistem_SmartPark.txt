@@ -1,0 +1,64 @@
+ALUR SISTEM APLIKASI SMART PARK (PARKING MANAGEMENT SYSTEM)
+===========================================================
+
+Sistem Smart Park adalah aplikasi manajemen area perparkiran berbasis web yang mengintegrasikan pencatatan kendaraan secara real-time, perhitungan tarif otomatis berdasarkan jenis kendaraan dan lama parkir, serta pelaporan keuangan terpadu.
+
+A. AKTOR PENGGUNA SISTEM (ROLES)
+1. Petugas : Bertanggung jawab mencatat kendaraan yang masuk dan keluar secara langsung di lapangan.
+2. Admin   : Bertugas mengelola data master (Data User, Tarif Parkir, Area Parkir, Log Aktivitas).
+3. Owner   : Pemilik lahan/bisnis yang dapat memantau keseluruhan omset, grafik pendapatan bulanan, dan mengekspor laporan akhir (PDF/Cetak).
+
+B. ALUR KERJA SISTEM (DARI AWAL SAMPAI AKHIR)
+
+1. PROSES AUTENTIKASI (LOGIN & ROLE)
+   - Semua pengguna (Petugas/Admin/Owner) harus melakukan login menggunakan username dan password.
+   - Sistem akan menyeleksi "Role" pengguna. Jika yang login adalah Petugas, maka halaman yang terbuka otomatis adalah Dashboard Petugas (tidak bisa secara bebas mengakses menu rahasia Admin/Owner), dan seterusnya.
+
+2. ALUR KENDARAAN MASUK (FLOW IN - OLEH PETUGAS)
+   - Petugas standby di halaman "Terminal Masuk".
+   - Saat ada kendaraan tiba di gerbang, petugas menginput:
+     a. Plat Nomor (WAJIB) - Sebagai identifier unik kendaraan.
+     b. Jenis Kendaraan (Mis: Mobil/Motor - WAJIB) - Untuk menentukan jenis tarif yang berlaku.
+     c. Nama Pemilik (Opsional) - Sebagai data tambahan.
+     d. Warna Kendaraan (Opsional) - Sebagai data tambahan.
+   - Sistem akan tervalidasi: Mengecek apakah Plat Nomor yang dimasukkan sedang berada di dalam area parkir. Jika iya, maka sistem menolak demi mencegah "Double Parking".
+   - Sistem akan tervalidasi: Mengecek sisa kapasitas kendaraan di Area Parkir. Jika penuh, transaksi ditolak.
+   - Jika valid lolos, Sistem mencatat waktu masuk (Timestamp detik itu juga).
+   - Sistem otomatis men-generate **Nomor Tiket Unik** secara acak (contoh: TKT-1234-ABCD).
+   - Area Parkir otomatis bertambah angka "Kapasitas Terisi"-nya sebesar 1 unit.
+   - Transaksi tersimpan rapi dengan status bawaan = PENDING (Menunggu Keluar).
+   - Notifikasi pop-up "Kendaraan Masuk" akan muncul di layer dan disiarkan real-time (live) ke semua perangkat pengguna.
+
+3. ALUR KENDARAAN KELUAR (FLOW OUT & PEMBAYARAN - OLEH PETUGAS)
+   - Petugas beralih di halaman "Terminal Keluar".
+   - Saat sebuah kendaraan ingin keluar, ada dua cara mudah mencarinya:
+     a. Menggunakan Nomor Tiket, ATAU
+     b. Menggunakan Plat Nomor kendaraan tersebut.
+   - Sistem memanggil dan menampilkan data detail: Jam Masuk dan identitas parkir dari kendaraan tersebut.
+   - Petugas menekan aksi "Proses Checkout".
+   - Sistem mengeksekusi Kalkulasi Biaya secara Otomatis Live di Balik Layar:
+     *(Rumus: Dihitung selisih jam keluar dan jam masuk. Jam pertama dikenakan 'Tarif Jam Pertama'. Sisa jam berikutnya dikenakan 'Tarif Jam Berikutnya' dikali durasi sisa jam. Jika nominal melewati batas max harian, otomatis diturunkan menjadi Batas Maksimal Harian)*.
+   - Sistem merincikan besaran biaya. Petugas meminta pembayaran tunai kepada pengemudi sesuai "Total Biaya" yang dihitung Komputer.
+   - Petugas mengetikkan uang tunai "Uang Diterima", lalu sistem memunculkan jumlah "Uang Kembalian".
+   - Mengonfirmasi penekanan "Selesaikan Pembayaran":
+     a. Status Transaksi berubah seketika dari PENDING menjadi LUNAS.
+     b. Waktu Keluar otomatis dicatat mati secara permanen (Timestamp Checkout).
+     c. Kapasitas ruang "Terisi" di Area Parkir langsung dilonggarkan kembali (berkurang) 1 unit otomatis.
+   - Alur selesai, sistem membuka dialog siap untuk mencetak (Print Struk) Thermal ke device printer parkir.
+
+4. ALUR PENGELOLAAN DATA MASTER (OLEH ADMIN)
+   - Admin login dan dialihkan menuju Dashboard Admin.
+   - Melalui sidebar, Admin dapat mengatur operasional inti:
+     a. Manajemen User: Menambah akun petugas baru, modifikasi informasi/password, atau blokir akses (Hapus).
+     b. Manajemen Tarif: Merubah besaran aturan tarif. Misalnya jika manajemen memutuskan Tarif Mobil dinaikkan dari 5000 ke 6000. Begitu di-update, tiap kendaraan Mobil yang checkout seketika mengikuti rumus matematika 6000 yang baru.
+     c. Manajemen Area: Membuat pangkalan parkiran baru, dan mutlak mengatur batas Limit Maksimal jumlah parkiran.
+     d. Log Aktivitas: Memantau segala macam riwayat klik dan histori rekam jejak. Mulai dari log in, validasi masuk motor, hingga cetak tiket dari semua user. Mencegah potensi kecurangan dan transparansi.
+
+5. ALUR PELAPORAN KABIN/KEUANGAN (OLEH OWNER)
+   - Owner log in dan langsung diberikan sorotan mewah pada Grafik Statistik Vertikal (Bar Chart) yang menampilkan perbandingan nyata total penghasilan kotor bulan demi bulan (contoh: Januari vs Februari).
+   - Di tab "Rekap Transaksi Laporan", Owner membeberkan laporan transaksi dan dapat menyaringnya via fitur kalender Filter: "Hari Ini", "Bulan Ini", atau menyetel Custom "Bulan & Tahun Spesifik".
+   - Komputer memperlihatkan angka bulat total uang masuk hari itu ke rekening manajemen secara akurat tanpa meleset.
+   - Owner menekan utilitas tunggal "Export PDF" atau "Cetak Data". Komputer akan mengemas data menjadi Format File Dokumen Tabel PDF formal tanpa repot meminta rekap tulisan tangan dari petugas lapangan.
+
+C. KESIMPULAN SISTEM INTEGRITAS
+Aplikasi berdesain canggih dan estetis ini sudah 100% otomatis, ditopang oleh fondasi keamanan validasi kuat (Duplicate Blocking / Threshold Gate Overload), perhitungan matematika mesin yang dijamin kebal human-error (Auto Financial Costing), transparansi notifikasi instan web socket, dan kemudahan ekstraksi pelaporan bagi eksekutif. Sistem yang komprehensif, cepat dan siap mendigitalisasi area parkir konvensional menjadi terpadu.

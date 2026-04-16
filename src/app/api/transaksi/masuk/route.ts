@@ -9,7 +9,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Unauthorized: Akses ditolak" }, { status: 401 });
     }
 
-    const { plat_nomor, jenis } = await req.json();
+    const { plat_nomor, jenis, pemilik, warna } = await req.json();
 
     if (!plat_nomor || !jenis) {
       return NextResponse.json({ message: "Plat nomor dan jenis kendaraan wajib diisi" }, { status: 400 });
@@ -18,10 +18,16 @@ export async function POST(req: Request) {
     // Upsert Kendaraan based on unique plat_nomor
     const kendaraan = await prisma.kendaraan.upsert({
       where: { plat_nomor },
-      update: { jenis_kendaraan: jenis }, // Jika ganti jenis, update
+      update: { 
+        jenis_kendaraan: jenis,
+        ...(pemilik ? { pemilik } : {}),
+        ...(warna ? { warna } : {})
+      },
       create: {
         plat_nomor,
         jenis_kendaraan: jenis,
+        pemilik: pemilik || null,
+        warna: warna || null
       }
     });
 

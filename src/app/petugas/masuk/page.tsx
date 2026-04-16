@@ -16,6 +16,8 @@ type JenisKendaraan = { id: string; nama: string };
 export default function KendaraanMasukPage() {
   const [platNomor, setPlatNomor] = useState("");
   const [jenis, setJenis] = useState("");
+  const [pemilik, setPemilik] = useState("");
+  const [warna, setWarna] = useState("");
   const [jenisOptions, setJenisOptions] = useState<JenisKendaraan[]>([]);
   const [loading, setLoading] = useState(false);
   const [duplicateError, setDuplicateError] = useState("");
@@ -58,7 +60,7 @@ export default function KendaraanMasukPage() {
     if (!jenis) { toast.error("Pilih jenis kendaraan"); return; }
     setLoading(true);
     try {
-      const res = await fetch("/api/transaksi/masuk", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ plat_nomor: platNomor.trim(), jenis }) });
+      const res = await fetch("/api/transaksi/masuk", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ plat_nomor: platNomor.trim(), jenis, pemilik: pemilik.trim(), warna: warna.trim() }) });
       const data = await res.json();
       if (!res.ok) { 
         if (res.status === 409 || data.code === "DUPLICATE_PLAT") {
@@ -75,12 +77,14 @@ export default function KendaraanMasukPage() {
         toast.success("Tiket berhasil diterbitkan!"); 
         setLastTicket(data.transaksi); 
         setPlatNomor(""); 
+        setPemilik("");
+        setWarna("");
       }
     } catch { toast.error("Gagal terhubung ke server"); }
     finally { setLoading(false); }
   };
 
-  const handleReset = () => { setLastTicket(null); setPlatNomor(""); setDuplicateError(""); };
+  const handleReset = () => { setLastTicket(null); setPlatNomor(""); setPemilik(""); setWarna(""); setDuplicateError(""); };
 
   // Dynamic columns based on count
   const colsClass = jenisOptions.length <= 3 ? "grid-cols-3" : jenisOptions.length <= 5 ? "grid-cols-5" : "grid-cols-4";
@@ -194,6 +198,30 @@ export default function KendaraanMasukPage() {
                           ))}
                         </div>
                       )}
+                    </div>
+
+                    {/* Pemilik dan Warna Input (Opsional) */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-semibold mb-1.5 block">Nama Pemilik (Opsi)</label>
+                        <Input
+                          value={pemilik}
+                          onChange={(e) => setPemilik(e.target.value)}
+                          placeholder="Mis: Budi"
+                          className="h-12 rounded-xl bg-muted/40 border-2 transition-colors focus:border-primary"
+                          disabled={loading}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-semibold mb-1.5 block">Warna (Opsi)</label>
+                        <Input
+                          value={warna}
+                          onChange={(e) => setWarna(e.target.value)}
+                          placeholder="Mis: Hitam"
+                          className="h-12 rounded-xl bg-muted/40 border-2 transition-colors focus:border-primary"
+                          disabled={loading}
+                        />
+                      </div>
                     </div>
 
                     {/* Submit */}

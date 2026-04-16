@@ -51,6 +51,7 @@ model Kendaraan {
   jenis_kendaraan String
   merk            String?
   warna           String?
+  pemilik         String?
   createdAt       DateTime @default(now())
 
   transaksi       Transaksi[]
